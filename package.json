@@ -14,8 +14,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "lldbvisualizer.helloWorld",
-        "title": "Hello World"
+        "command": "lldbvisualizer.openVisualizer",
+        "title": "Open Visualizer"
       }
     ]
   },

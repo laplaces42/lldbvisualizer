@@ -8,6 +8,11 @@ out/
 dist/
 build/
 
+# Python cache
+__pycache__/
+*.py[cod]
+*.so
+
 # Test outputs
 coverage/
 .vscode-test/
@@ -18,6 +23,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 *.vsix
+
+# Ignore dynamically created binary or shared objects
+*.dylib
+*.o
+*.out
+*.exe
 
 # Environment files
 .env*
