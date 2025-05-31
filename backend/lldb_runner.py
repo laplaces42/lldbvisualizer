@@ -28,8 +28,8 @@ import lldb
 
 
 
-session = SessionContext()
-server = Server("127.0.0.1", 4952)
+session = None
+server = None
 
 # Object to hold debugger state
 debug_state = {
@@ -364,7 +364,7 @@ def receive_messsage():
                 # print(f"[ERROR] Failed to decode JSON: {e}")
                 break
 
-def main(memory_log, snapshot_file):
+def main(memory_log):
     
      # Clear the memory log
     os.makedirs(os.path.dirname(memory_log), exist_ok=True)
@@ -486,7 +486,9 @@ def cleanup():
 atexit.register(cleanup)
         
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    session = SessionContext()
+    server = Server("127.0.0.1", 4952, sys.argv[2])
+    main(sys.argv[1])
 
 
 '''

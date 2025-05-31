@@ -2,6 +2,7 @@ import threading
 import subprocess
 import socket
 import sys
+import os
 # Dynamically get the LLDB Python path
 def get_lldb_python_path():
     try:
@@ -34,9 +35,29 @@ class SessionContext:
     
 
 class Server:
-    def __init__(self, HOST, PORT):
+    def __init__(self, HOST, PORT, port_file):
+        os.makedirs(os.path.dirname(port_file), exist_ok=True)
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.bind((HOST, PORT))
+        port_found = False
+        max_tries = 100
+        tries = 0
+        while not port_found and tries < max_tries:
+            try:
+                self.server.bind((HOST, PORT))
+                port_found = True
+                with open(port_file, "w") as pf:
+                    pf.write(str(PORT))
+            except socket.error as e:
+                if e.errno == 48:  # Address already in use
+                    PORT += 1
+                    tries += 1
+                    continue
+                else:
+                    print(f"[ERROR] Failed to bind server socket: {e}")
+                    sys.exit(1)
+        if not port_found:
+            print(f"[ERROR] Could not bind to any port after {max_tries} attempts.")
+            sys.exit(1)
         self.server.listen(1)
         self.conn, self.addr = self.server.accept()
         self.socket_lock = threading.Lock()

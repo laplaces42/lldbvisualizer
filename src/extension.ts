@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as net from 'net';
+import { spawn } from 'child_process';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -23,33 +24,46 @@ export function activate(context: vscode.ExtensionContext) {
 
 		
 		const memoryLogPath = path.join(context.globalStorageUri.fsPath, 'memory_log.jsonl');
-		const snapshotPath = path.join(context.globalStorageUri.fsPath, 'snapshot.json');
+		const portPath = path.join(context.globalStorageUri.fsPath, 'port.txt');
+		if (!fs.existsSync(memoryLogPath)) {
+			fs.writeFileSync(memoryLogPath, '');
+		}
+		fs.writeFileSync(portPath, '');
 		
 		const pythonExecutable = "/opt/homebrew/bin/python3";
 		const backendPath = path.join(context.extensionPath, 'backend/lldb_runner.py');
-		
+	
 		const terminal = vscode.window.createTerminal("LLDB Backend");
 		terminal.show();
 		terminal.sendText("\n", true);
 		terminal.sendText("clear", true);
-		terminal.sendText(`${pythonExecutable} "${backendPath}" "${memoryLogPath}" "${snapshotPath}"`, true);
+		terminal.sendText(`${pythonExecutable} "${backendPath}" "${memoryLogPath}" "${portPath}"`, true);
 		
 		const connectToSocket = () => {
 			const client = new net.Socket();
-			client.connect(4952, '127.0.0.1', () => {
-				console.log('[socket] Connected to backend');
-				socket = client;
-			});
+			const pollForPort = () => {
+				let portNum = fs.readFileSync(portPath, 'utf8').trim();
+				if (!isNaN(parseInt(portNum))) {
+					console.log(`[socket] Attempting to connect to port ${portNum}`);
+					client.connect(parseInt(portNum), '127.0.0.1', () => {
+						console.log('[socket] Connected to backend');
+						socket = client;
+					});
 
-			client.on('data', (data) => {
-				const message = data.toString();
-				panel.webview.postMessage({ data: JSON.parse(message) });
-			});
+					client.on('data', (data) => {
+						const message = data.toString();
+						panel.webview.postMessage({ data: JSON.parse(message) });
+					});
 
-			client.on('error', (err) => {
-				console.log('[socket] Connection failed, retrying in 500ms...');
-				setTimeout(connectToSocket, 500); // Retry connection every 500ms
-			});
+					client.on('error', (err) => {
+						console.log('[socket] Connection failed, retrying in 500ms...');
+						setTimeout(connectToSocket, 500); // Retry connection every 500ms
+					});
+				} else {
+					setTimeout(pollForPort, 300); // Poll every 300ms until port is available
+				}
+			};
+			pollForPort();
 		};
 
 		connectToSocket();

@@ -3,7 +3,7 @@
   "displayName": "lldbVisualizer",
   "publisher": "laplaces42",
   "description": "",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "engines": {
     "vscode": "^1.100.0"
   },
