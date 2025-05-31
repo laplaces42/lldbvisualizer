@@ -1,6 +1,7 @@
 {
   "name": "lldbvisualizer",
   "displayName": "lldbVisualizer",
+  "publisher": "laplaces42",
   "description": "",
   "version": "0.0.1",
   "engines": {

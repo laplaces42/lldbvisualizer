@@ -44,3 +44,5 @@ yarn-error.log*
 webview-ui/node_modules/
 webview-ui/build/
 webview-ui/coverage/
+
+*.txt
