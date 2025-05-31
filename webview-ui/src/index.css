@@ -1,0 +1,521 @@
+* {
+  box-sizing: border-box;
+}
+
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #1e1e1e;
+  color: #ffffff;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+  monospace;
+}
+
+.debug-visualizer {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+}
+
+.row-container {
+  display: flex;
+  flex-direction: column;
+  height: 40%;
+  max-height: 40%;
+}
+
+.thread-controller {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.col-container {
+  display: flex;
+  height: 60%;
+  border-top: 3px solid #333333;
+}
+
+.right-col {
+  height: 100%;
+  width: 45%;
+  min-height: 0;
+  overflow-y: hidden;
+}
+
+.left-col {
+  border-right: 3px solid #333333;
+  height: 100%;
+  width: 55%;
+}
+
+.thread-dropdown {
+  border-top: 3px solid #333333;
+  border-bottom: 3px solid #333333;
+  padding: 5px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.thread-info {
+  display: flex;
+  font-size: small;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: hidden;
+}
+
+.stack-controller {
+  display: flex;
+  width: 70%;
+}
+
+
+
+label {
+  font:large;
+}
+
+select {
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+select:focus {
+  outline: none;
+  border-color: #007acc;
+  box-shadow: 0 0 0 2px #007acc;
+}
+
+option {
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+}
+
+.locals {
+  text-align: left;
+  width: 65%;
+}
+
+.locals p {
+  margin: 13px 6px;
+}
+
+.locals-container {
+
+  flex: 1;
+  overflow-y: auto;
+  height: 100%;
+  
+
+}
+
+.frames {
+  font-size: 0.85rem;
+  width: 35%;
+  max-height: 100%;
+  border-right: 3px solid #333;
+  display: flex;
+  flex-direction: column;
+}
+
+.frames-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: visible;
+  position: relative;
+  height: 100%;
+  white-space: nowrap;
+  
+}
+
+.registers {
+  width: 30%;
+  border-left: 3px solid #333333;
+  
+}
+
+.registers-container {
+  padding: 0 10px;
+  flex: 1;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.single-register {
+  display: flex;
+  justify-content: space-between;
+}
+
+
+
+.stack-frame {
+  /* border: 1px solid black; */
+  background-color: #1e1e1e;
+  padding: 5px;
+  display: block; 
+  min-width: 100%;
+  transition: background-color 0.3s;
+  
+}
+
+.stack-frame-selected {
+  background-color: #2a2d2e;
+  padding: 5px;
+  display: block; 
+  min-width: 100%;
+  max-width: 100%;
+  border-left: 3px solid #007acc;
+  transition: all 0.3s;
+}
+
+.stack-frame p {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background-color: #1e1e1e;
+  
+  transition: all 0.3s;
+
+}
+
+.stack-frame-selected p {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background-color: #2a2d2e;
+  transition: all 0.3s;
+}
+
+/* On hover: expand both the container and text */
+.stack-frame:hover, .stack-frame-selected:hover {  
+  background-color: #2a2d2e;
+  /* border: 1px solid #007acc; */
+
+  cursor: pointer;
+  transition: all 0.3s;
+  
+}
+
+.stack-frame:hover p, .stack-frame-selected:hover p {
+
+  background-color: #2a2d2e;
+
+}
+
+.locals-header, .frames-header, .registers-header, .breakpoints-header, .memory-inspection-header, .heap-header {
+  margin: 10px 0;
+  margin-bottom: 0;
+  text-align: center;
+  font-size: 1rem;
+  border-bottom: 3px solid #333;
+  /* height: 20px; */
+}
+
+.breakpoints-header {
+  border-top: 3px solid #333;
+}
+
+.breakpoints {
+  height: 45%;
+  display: flex;
+  flex-direction: column;
+}
+
+.memory-inspection {
+  height: 55%;
+  display: flex;
+  flex-direction: column;
+}
+
+.heap {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  /* padding: 20px 40px;
+  padding-top: 0; */
+}
+
+.heap-container {
+  flex: 1;
+  width: 100%;
+  overflow-y: auto;
+  max-height: 100%;
+  background-color: #2f2f2f;
+  background-image: repeating-linear-gradient(
+    45deg,
+    #2f2f2f,
+    #2f2f2f 10px,
+    #3a3a3a 10px,
+    #3a3a3a 20px
+  );
+  border: 8px solid #181818;
+  border-radius: 6px;
+  
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.4);
+  
+}
+
+
+.heap-obj {
+  /* background-color: #2f2f2f; */
+  overflow-y: auto;
+
+  position: relative;
+  /* border: 1px solid #444; */
+  border-radius: 6px;
+}
+
+
+.heap-block {
+  position: relative;
+  align-items: center;
+  width: 100%;
+  background-color: #009dff;
+  border: 0.2px solid #007acc;
+  transition: all 0.3s;
+}
+
+.heap-block:hover {
+  background-color: #007acc;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.heap-block-info {
+  position: fixed;
+  z-index: 999;
+  background-color: #1e1e1e;
+  color: #ffffff;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 5px 7px;
+  font-size: 0.9rem;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  max-width: 240px;
+  line-height: 1;
+}
+
+.breakpoints-container {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.breakpoint-item {
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+}
+
+.breakpoint-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 5px;
+  transition: background-color 0.3s;
+}
+
+.breakpoint-summary:hover {
+  background-color: #2a2d2e;
+}
+
+.breakpoint-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breakpoint-location-list {
+  margin-left: 30px;
+  margin-top: 4px;
+  padding-left: 0;
+  list-style: none;
+}
+
+.breakpoint-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+}
+
+.breakpoint-location-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caret {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+/* Rotate caret when open */
+.breakpoint-item[open] .caret {
+  transform: rotate(90deg);
+}
+
+.breakpoint-enabled {
+  font-size: 30px;
+}
+
+.memory-search-bar {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  /* margin: 0 4px; */
+  margin-top: 3px;
+  padding: 2px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+}
+
+/* Optional: make labels more compact */
+.search-bar label {
+  font-size: small;
+  white-space: nowrap;
+}
+
+.search-button {
+  color: gray;
+  transition: all 0.3s;
+}
+
+.search-button:hover {
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.address-input {
+  width: 30%;
+  min-width: 0;
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.word-count-input {
+  width: 20%;
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.control-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.control-buttons {
+  display: flex;
+  gap: 8px;
+  padding-left: 10px;
+  height: 100%;
+}
+
+.control-button {
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  color: gray;
+  transition: all 0.3s;
+}
+
+.control-button:hover {
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  
+}
+
+.delete-bp {
+  background-color: transparent;
+  border: 0;
+  color: grey;
+  scale: 0.6;
+  transition: all 0.3s;
+}
+
+.delete-bp:hover {
+  color: red;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.memory-error {
+  margin: 8px;
+  border: 1px solid red;
+  background-color: #2a2d2e;
+  padding: 4px 0;
+  opacity: 0.8;
+  border-radius: 6px;
+}
+
+.memory-inspection-container {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.memory-table-container {
+  flex: 1;
+  overflow: auto;
+}
+
+.memory-table {
+  max-width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  
+  flex: 1;
+}
+
+.memory-table th,
+.memory-table td {
+  border: 1px solid #ccc;
+  padding: 8px 12px;
+  text-align: left;
+  
+  
+  
+}
+
+.memory-table td {
+  font-family: monospace;
+  font-size: 0.8rem;
+  
+}
+
+.memory-table th {
+  background-color: #333333;
+}

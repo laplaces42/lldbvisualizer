@@ -1,0 +1,17 @@
+{
+    "metadata": {
+      "wordSize": -1,
+      "pointerSize": -1,
+      "endianness": "",
+      "architecture": "",
+      "processID": -1,
+      "processState": -1
+    },
+    "threads": [],
+    "breakpoints": [],
+    "heap": {
+      "start": "",
+      "end": "",
+      "blocks": []
+    }
+  }
