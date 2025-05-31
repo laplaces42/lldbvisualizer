@@ -367,6 +367,7 @@ def receive_messsage():
 def main(memory_log, snapshot_file):
     
      # Clear the memory log
+    os.makedirs(os.path.dirname(memory_log), exist_ok=True)
     with open(memory_log, "w") as f:
         f.write("")
     
