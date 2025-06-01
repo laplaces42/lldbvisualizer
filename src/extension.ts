@@ -12,7 +12,7 @@ let socket: net.Socket | null = null;
 export function activate(context: vscode.ExtensionContext) {
 
 	const webView = vscode.commands.registerCommand('lldbvisualizer.openVisualizer', () => {
-		const panel = vscode.window.createWebviewPanel("lldbVisualizer", "lldbVisualizer", vscode.ViewColumn.One, {enableScripts: true});
+		const panel = vscode.window.createWebviewPanel("lldbVisualizer", "lldbVisualizer", vscode.ViewColumn.Beside, {enableScripts: true});
 		const htmlPath = path.join(context.extensionPath, 'build', 'index.html');
 		let htmlContent = fs.readFileSync(htmlPath, 'utf8');
 		htmlContent = htmlContent.replace(/(src|href)="(.+?)"/g, (_, attr, src) => {
