@@ -13,3 +13,4 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Updated webview location opening and sizing (0.1.1)
 - Fixed bug that did not include build folder with extension output (0.1.2)
 - Unconditionally created memory log file inside activation script (0.1.3)
+- Created parent directory for memory log and port file if it does not already exist (0.1.4)

@@ -25,6 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
 		
 		const memoryLogPath = path.join(context.globalStorageUri.fsPath, 'memory_log.jsonl');
 		const portPath = path.join(context.globalStorageUri.fsPath, 'port.txt');
+		fs.mkdirSync(context.globalStorageUri.fsPath, { recursive: true });
 		fs.writeFileSync(memoryLogPath, '');
 		fs.writeFileSync(portPath, '');
 		
