@@ -17,11 +17,46 @@ LLDB Visualizer is a Visual Studio Code extension that provides an interactive, 
 - **LLDB** (must be installed and available in your PATH)
 - macOS (tested; other platforms may require adjustments)
 
+### Installing LLDB via Homebrew (Recommended)
+
+To ensure you have the latest version of LLDB, install it via Homebrew:
+
+```sh
+brew install llvm
+```
+
+This will install LLDB and related tools to `/opt/homebrew/opt/llvm/bin` (Apple Silicon) or `/usr/local/opt/llvm/bin` (Intel Macs).
+
+#### Add Homebrew LLDB to your PATH
+
+Add the following to your shell profile (e.g., `~/.zshrc` or `~/.bash_profile`):
+
+```sh
+# For Apple Silicon (M1/M2):
+export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+
+# For Intel Macs:
+# export PATH="/usr/local/opt/llvm/bin:$PATH"
+```
+
+Then reload your shell profile:
+
+```sh
+source ~/.zshrc  # or source ~/.bash_profile
+```
+
+You can verify the correct LLDB is being used with:
+
+```sh
+which lldb
+lldb --version
+```
+
 ## Getting Started
 
 1. **Install dependencies:**
    - Python 3
-   - LLDB
+   - LLDB (see above)
    - Node.js and npm
 
 2. **Build the webview UI:**
