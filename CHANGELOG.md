@@ -12,3 +12,4 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Improved print output to no longer wait on select calls (0.1.0)
 - Updated webview location opening and sizing (0.1.1)
 - Fixed bug that did not include build folder with extension output (0.1.2)
+- Unconditionally created memory log file inside activation script (0.1.3)

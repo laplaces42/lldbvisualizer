@@ -25,9 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
 		
 		const memoryLogPath = path.join(context.globalStorageUri.fsPath, 'memory_log.jsonl');
 		const portPath = path.join(context.globalStorageUri.fsPath, 'port.txt');
-		if (!fs.existsSync(memoryLogPath)) {
-			fs.writeFileSync(memoryLogPath, '');
-		}
+		fs.writeFileSync(memoryLogPath, '');
 		fs.writeFileSync(portPath, '');
 		
 		const pythonExecutable = "/opt/homebrew/bin/python3";
