@@ -4,6 +4,8 @@ import subprocess
 import threading
 import atexit
 import socket
+import signal
+import pty
 import select
 import json
 import time
@@ -363,6 +365,13 @@ def receive_messsage():
             except json.JSONDecodeError as e:
                 # print(f"[ERROR] Failed to decode JSON: {e}")
                 break
+def lldb_forward(proc):
+    for line in iter(proc.stdout.readline, ''):   # blocks until a line
+        sys.stdout.write(f'line: {line}')
+        if line.strip().startswith("(lldb)"):
+            # when LLDB emits its prompt, re-prompt the user
+            continue
+
 
 def main(memory_log):
     
@@ -376,71 +385,148 @@ def main(memory_log):
     prev_command = ""
     prev_target = None
     target = None
-    server.AddDebugThread(threading.Thread(target=update_debugger, args=(memory_log,)))
-    server.AddClientThread(threading.Thread(target=receive_messsage, args=()))
+    server.AddDebugThread(threading.Thread(target=update_debugger, args=(memory_log,), daemon=True))
+    server.AddClientThread(threading.Thread(target=receive_messsage, args=(), daemon=True))
 
-    lldb_process = subprocess.Popen("lldb", stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
-    while True:
-        command = input("(lldb) ").strip()
-        if not command:
-            command = prev_command
-        else:
-            prev_command = command
-        if command in ["exit", "quit", "q"]:
-            if target and target.GetProcess().IsValid():
-                confirmation = input("Quitting LLDB will kill one or more processes. Do you really want to proceed: [Y/n] ")
-                while confirmation not in ["Y", "y", "N", "n"]:
-                    confirmation = input("Quitting LLDB will kill one or more processes. Do you really want to proceed: [Y/n] ")
-                if confirmation in ["Y", "y"]:
-                    lldb_process.terminate()
-                    break
-                else:
-                    continue
-            else:
-                lldb_process.terminate()
-                break
-        session.cmd_interpreter.HandleCommand(command, session.result)
-        lldb_process.stdin.write(command + '\n')
-        lldb_process.stdin.flush()
-        fds = [lldb_process.stdout, lldb_process.stderr]
-
+    pid, fd = pty.fork()          # child gets its own pseudo-terminal
+    if pid == 0:                  # child process: exec lldb
+        os.execvp("lldb", ["lldb"])
+    else:                         # parent process: forward I/O
+        command = ""
         while True:
-            ready, _, _ = select.select(fds, [], [], 0.7)
-            if not ready:
-                break
-            for fd in ready:
-                data = os.read(fd.fileno(), 2048).decode()
-                if data.strip().startswith(f"(lldb) {command}"):
-                    continue
+            r, _, _ = select.select([fd, sys.stdin], [], [])
+            if fd in r:
+                data = os.read(fd, 1024)
+                if not data: break
+                for line in data.splitlines(keepends=True):
+                    if line.decode("utf-8").strip() == command.strip():
+                        continue
+                    sys.stdout.buffer.write(line)
+                    sys.stdout.flush()
+            if sys.stdin in r:
+                command = os.read(sys.stdin.fileno(), 1024).decode("utf-8")
+                os.write(fd, command.encode("utf-8"))
+                
+                if command.strip() in ["exit", "quit", "q"]:
+                    if target and target.GetProcess().IsValid():
+                        confirmation = input("Quitting LLDB will kill one or more processes. Do you really want to proceed: [Y/n] ")
+                        while confirmation not in ["Y", "y", "N", "n"]:
+                            confirmation = input("Quitting LLDB will kill one or more processes. Do you really want to proceed: [Y/n] ")
+                        if confirmation in ["Y", "y"]:
+                            os.kill(pid, signal.SIGTERM)
+                            sys.exit(0)
+                            break
+                        else:
+                            continue
+                    else:
+                        os.kill(pid, signal.SIGTERM)
+                        sys.exit(0)
+                        print('bye')
+                        break
+                session.cmd_interpreter.HandleCommand(command.strip(), session.result)
 
-                print(data, end="", flush=True)
+                target = session.debugger.GetSelectedTarget()
+                if target and target != prev_target:
+                    target.GetBroadcaster().AddListener(session.listener, lldb.SBTarget.eBroadcastBitBreakpointChanged)
+                    with session.debug_lock:
+                        debug_state["metadata"] = {
+                            "wordSize": target.GetAddressByteSize(),
+                            "pointerSize": target.GetAddressByteSize(),
+                            "endianness": byte_order_enum[target.GetByteOrder()],
+                            "architecture": target.GetPlatform().GetTriple().split("-")[0]
+                        }
+                    
+                    # Get the library to intercept dynamic memory manipulation functions
+                    intercept_lib = os.path.dirname(os.path.abspath(__file__)) + "/libintercept.dylib"
+                    launch = target.GetLaunchInfo() # Launch info
+                    env = launch.GetEnvironment() # Environment info
 
-        target = session.debugger.GetSelectedTarget()
-        if target and target != prev_target:
-            target.GetBroadcaster().AddListener(session.listener, lldb.SBTarget.eBroadcastBitBreakpointChanged)
-            with session.debug_lock:
-                debug_state["metadata"] = {
-                    "wordSize": target.GetAddressByteSize(),
-                    "pointerSize": target.GetAddressByteSize(),
-                    "endianness": byte_order_enum[target.GetByteOrder()],
-                    "architecture": target.GetPlatform().GetTriple().split("-")[0]
-                }
+                    # Load the intercept library
+                    env.PutEntry(f"MEMORY_LOG_PATH={memory_log}")
+                    env.PutEntry(f"DYLD_INSERT_LIBRARIES={intercept_lib}")
+                    env.PutEntry("DYLD_FORCE_FLAT_NAMESPACE=1")
+
+                    # Set the environmemt and launch info
+                    launch.SetEnvironment(env, False)
+                    target.SetLaunchInfo(launch)
+
+                    prev_target = target
+                
+
+    # lldb_process = subprocess.Popen("lldb", stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1)
+    # threading.Thread(target=lldb_forward, args=(lldb_process,), daemon=True).start()
+    # prompt_event = threading.Event()
+    # while True:
+    #     command = input("(lldb) ").strip()
+    #     if not command:
+    #         command = prev_command
+    #     else:
+    #         prev_command = command
+    #     if command in ["exit", "quit", "q"]:
+    #         if target and target.GetProcess().IsValid():
+    #             confirmation = input("Quitting LLDB will kill one or more processes. Do you really want to proceed: [Y/n] ")
+    #             while confirmation not in ["Y", "y", "N", "n"]:
+    #                 confirmation = input("Quitting LLDB will kill one or more processes. Do you really want to proceed: [Y/n] ")
+    #             if confirmation in ["Y", "y"]:
+    #                 lldb_process.terminate()
+    #                 break
+    #             else:
+    #                 continue
+    #         else:
+    #             lldb_process.terminate()
+    #             break
+    #     session.cmd_interpreter.HandleCommand(command, session.result)
+    #     # prompt_event.clear()
+    #     lldb_process.stdin.write(command + '\n')
+    #     lldb_process.stdin.flush()
+    #     # for line in iter(lldb_process.stdout.readline, ''):   # blocks until a line
+    #     #     sys.stdout.write(line)
+    #     #     if not line:
+    #     #         print("LLDB process terminated.")
+    #     #     if line.strip().startswith("(lldb)"):
+    #     #         continue
+    #             # when LLDB emits its prompt, re-prompt the user
+    #             # sys.stdout.write("(lldb) ")
+    #             # sys.stdout.flush()
+    #     # fds = [lldb_process.stdout, lldb_process.stderr]
+
+    #     # while True:
+    #     #     ready, _, _ = select.select(fds, [], [], 0.7)
+    #     #     if not ready:
+    #     #         break
+    #     #     for fd in ready:
+    #     #         data = os.read(fd.fileno(), 2048).decode()
+    #     #         if data.strip().startswith(f"(lldb) {command}"):
+    #     #             continue
+
+    #     #         print(data, end="", flush=True)
+
+    #     target = session.debugger.GetSelectedTarget()
+    #     if target and target != prev_target:
+    #         target.GetBroadcaster().AddListener(session.listener, lldb.SBTarget.eBroadcastBitBreakpointChanged)
+    #         with session.debug_lock:
+    #             debug_state["metadata"] = {
+    #                 "wordSize": target.GetAddressByteSize(),
+    #                 "pointerSize": target.GetAddressByteSize(),
+    #                 "endianness": byte_order_enum[target.GetByteOrder()],
+    #                 "architecture": target.GetPlatform().GetTriple().split("-")[0]
+    #             }
             
-            # Get the library to intercept dynamic memory manipulation functions
-            intercept_lib = os.path.dirname(os.path.abspath(__file__)) + "/libintercept.dylib"
-            launch = target.GetLaunchInfo() # Launch info
-            env = launch.GetEnvironment() # Environment info
+    #         # Get the library to intercept dynamic memory manipulation functions
+    #         intercept_lib = os.path.dirname(os.path.abspath(__file__)) + "/libintercept.dylib"
+    #         launch = target.GetLaunchInfo() # Launch info
+    #         env = launch.GetEnvironment() # Environment info
 
-            # Load the intercept library
-            env.PutEntry(f"MEMORY_LOG_PATH={memory_log}")
-            env.PutEntry(f"DYLD_INSERT_LIBRARIES={intercept_lib}")
-            env.PutEntry("DYLD_FORCE_FLAT_NAMESPACE=1")
+    #         # Load the intercept library
+    #         env.PutEntry(f"MEMORY_LOG_PATH={memory_log}")
+    #         env.PutEntry(f"DYLD_INSERT_LIBRARIES={intercept_lib}")
+    #         env.PutEntry("DYLD_FORCE_FLAT_NAMESPACE=1")
 
-            # Set the environmemt and launch info
-            launch.SetEnvironment(env, False)
-            target.SetLaunchInfo(launch)
+    #         # Set the environmemt and launch info
+    #         launch.SetEnvironment(env, False)
+    #         target.SetLaunchInfo(launch)
 
-            prev_target = target
+    #         prev_target = target
 
 
 def cleanup():
@@ -458,11 +544,6 @@ def cleanup():
     except Exception as e:
         print(f"Connection close error: {e}")
 
-    try:
-        server.close()
-        # print("Server closed.")
-    except Exception as e:
-        print(f"Server close error: {e}")
 
     # Wait for threads to finish if they were started
     # try:
