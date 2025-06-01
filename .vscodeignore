@@ -4,7 +4,6 @@
 **/.vscode/**
 **/test/**
 **/tests/**
-**/build/**
 **/out/**
 **/node_modules/**
 **/webview-ui/node_modules/**
